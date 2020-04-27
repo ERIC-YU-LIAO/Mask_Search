@@ -4,13 +4,14 @@
     
 <div class="row no-gutters">
  <div class="col-sm-3">
+
     <div class="toolbox">
     <div class="sticky-top bg-white shadow-sm p-2">
     <div class="form-group d-flex">
       <label for="cityName" class="mr-2 col-form-label text-right">縣市</label>
             <div class="flex-fill">
               <select id="cityName" class="form-control"
-              v-model="select.city"  @change="select.area = '' ; updatestore()">
+              v-model="select.city"  @change="select.area = '';  updatestore();removeMark()">
                 <option value="">--select--</option>
                 <!-- value 取值 = {{c.CityName}} 綁定-->
                 <option :value="c.CityName"  v-for="c in cityName" :key="c.CityName">
@@ -23,26 +24,32 @@
           <label for="area" class="mr-2 col-form-label text-right">地區</label>
           <div class="flex-fill">
           <select id="area" class="form-control" v-model="select.area" @change="updatestore"> 
-          <option :value="a.AreaName" v-for="a in cityName.find( (city) => city.CityName === select.city).AreaList" :key="a.AreaName">
-            {{a.AreaName}}
+            <option value="">--請選擇地區--</option>
+            <!-- find() 方法會回傳第一個滿足所提供之測試函式的元素值 -->
+          <option :value="a.AreaName" v-for="a in cityName.find((city) => city.CityName === select.city).AreaList" :key="a.AreaName">
+            {{a.AreaName}} 
           </option>
           </select>
         </div>
     </div>
-       <p class="mb-0 small text-muted text-right">請先選擇區域查看（綠色表示還有口罩）</p>
+       <p class="mb-0 small text-muted text-right">請先選擇區域才能查看</p>
  </div>
 
-        <ul class="list-group">
-            <template>
-                    <a class="list-group-item text-left">
-                      <h3>藥局名稱{{select.name}}</h3>
-                      <p class="mb-0">
-                      成人口罩：1 | 兒童口罩：2
-                      </p>
-                      <p class="mb-0">地址：<a href="https://www.google.com.tw/maps/place/..."
+
+        <ul class="list-group" >
+            <template v-for="(item,key) in data" >
+                    <a class="list-group-item text-left" v-if="item.properties.county === select.city && item.properties.town === select.area" :key="key" 
+                    :class="{ 'highlight': item.properties.mask_adult || item.properties.mask_child, 'low': item.properties.mask_adult  == 0 }">
+                        <h4 class="text-left">{{item.properties.name}}</h4> 
+                      <a href="https://www.google.com.tw/maps/place/..."
                       target="_blank" title="Google Map">
-                      地址</a>
+                      {{item.properties.address}}
+                      </a>
+                      <br>
+                      <p class="mb-0">
+                      成人口罩：{{item.properties.mask_adult}} | 兒童口罩：{{item.properties.mask_child}}
                       </p>
+                      <p class="badge badge-info font-weight-normal" style="width: 10rem;">更新: {{item.properties.updated}}</p>
                     </a>
             </template>
         </ul>
@@ -51,8 +58,15 @@
  </div>
  <div class="col-sm-9">
  <div id="map"></div>
+
+
  </div>
+ 
 </div>
+   <div style="background-color:gray; color:white" class="footer text-center">
+     作品練習用/Mask_map by Eric Liao
+    </div>
+
 
 
   </div>
@@ -75,6 +89,21 @@
  cursor: pointer;
  }
 }
+
+.highlight{
+  background-color: #dcedc2 ;
+  font-weight: 700;
+}
+.low{
+  color: red;
+  background-color: #ffaaa6;
+  
+}
+.footer{
+  height: 10vh;
+
+}
+
 </style>
 
 <script>
@@ -92,10 +121,12 @@ export default {
       cityName,
       select : {
         city:'臺北市',
-        area:"",
+        area:'中山區',
       },
     }
   },
+
+
   methods:{
     updatestore(){
     const stores = this.data.filter( (store) => 
@@ -158,7 +189,7 @@ export default {
   },
   mounted(){
     // let data = [];
-    // 藥局開源 API
+    //  url 藥局開源 API
     const url = 'https://raw.githubusercontent.com/kiang/pharmacies/master/json/points.json'
     this.$http.get(url).then((response) => {
       // console.log(response.data)
@@ -171,11 +202,10 @@ export default {
       center: [25.03, 121.55],
       zoom: 16
     });
-
+      //標記 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png?{foo}',
      {foo: 'bar', attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>'
      }).addTo(osmMap);
-    
     //  console.log('Outdata',data)
   },
 
